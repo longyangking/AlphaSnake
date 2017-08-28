@@ -68,7 +68,7 @@ class GameEngine:
     def restart(self,snakelength=3,velocity=1,timeperiod=0.5):
         return self.start(snakelength=snakelength,velocity=velocity,timeperiod=timeperiod)
 
-    def setresource(self)
+    def setresource(self):
         choice = np.random.randint(len(self.validplaces))
         place = self.validplaces[choice]
         pos = self.__place2pos(place)
