@@ -1,18 +1,27 @@
 import numpy as np 
-from . import snake
+import snake
 import time
 
 class GameEngine:
-    def __init__(self,Nx,Ny,player):
+    def __init__(self,Nx,Ny,player,timeperiod=1.0):
         self.Nx = Nx
         self.Ny = Ny
         self.snake = None
         self.score = 0
         self.player = player
+        self.timeperiod = timeperiod
+
+        self.resourcevalid = False
+        self.resourcepos = None
 
         self.area = np.zeros((Nx,Ny))
-        self.resourcevalid = False
         self.validplaces = list(range(self.Nx*self.Ny))
+    
+    def getarea(self):
+        return self.area
+    
+    def getscore(self):
+        return self.score
         
     def __pos2place(self,pos):
         place = self.Nx*pos[1] + pos[0]
@@ -44,7 +53,7 @@ class GameEngine:
         for i in range(snakelength-1):
             x = (x - direction[0])%self.Nx
             y = (y - direction[1])%self.Ny
-            body.append([x,y])
+            body.append((x,y))
 
         # Update Area Information
         for pos in body:
@@ -54,24 +63,23 @@ class GameEngine:
         self.snake = snake.snake(head=head,body=body,direction=direction,
                 velocity=velocity,player=self.player)
 
-    def start(self,snakelength=3,velocity=1,timeperiod=0.5):
-        self.area = np.zeros((Nx,Ny))
+    def start(self,snakelength=3,velocity=1):
+        self.area = np.zeros((self.Nx,self.Ny))
         self.resourcevalid = False
         self.validplaces = list(range(self.Nx*self.Ny))
         self.initsnake(snakelength=snakelength,velocity=velocity)
-
-        while self.update(timeperiod=timeperiod):
-            pass
         
         return True
 
-    def restart(self,snakelength=3,velocity=1,timeperiod=0.5):
-        return self.start(snakelength=snakelength,velocity=velocity,timeperiod=timeperiod)
+    def restart(self,snakelength=3,velocity=1):
+        return self.start(snakelength=snakelength,velocity=velocity)
 
     def setresource(self):
         choice = np.random.randint(len(self.validplaces))
         place = self.validplaces[choice]
         pos = self.__place2pos(place)
+
+        self.resourcepos = pos
         self.area[pos] = -1
         self.validplaces.remove(place)
 
@@ -90,19 +98,22 @@ class GameEngine:
         self.validplaces = list(range(self.Nx*self.Ny))
         self.area = np.zeros((self.Nx,self.Ny))
         for pos in body:
-            self.area[pos] == 1
+            self.area[pos] = 1
             place = self.__pos2place(pos)
             if place in self.validplaces:
                 self.validplaces.remove(place)
 
-    def update(self,timeperiod):
+        if self.resourcevalid:
+            self.area[self.resourcepos] = -1
+
+    def update(self):
         if not self.resourcevalid:
             self.setresource()
 
         starttime = time.time()
         self.snake.update(self.area)
         endtime = time.time()
-        time.sleep(timeperiod-(endtime-starttime))
+        time.sleep(self.timeperiod-(endtime-starttime))
 
         self.updatearea()   # Update Area
 

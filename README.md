@@ -6,5 +6,14 @@
 ## Features
 + Reinforcement Learning
 
+## Dependencies
++ Python 3+
++ PyQt5
+
 ## Status
 Working on it...
+
+## How to use
++ Play Retro Snake (Linux)  
+    ```cd alphasnake```  
+    ```python retrosnake.py```

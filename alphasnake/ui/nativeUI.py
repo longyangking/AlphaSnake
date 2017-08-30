@@ -5,7 +5,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 class nativeUI(QWidget):
-    playsignal = pyqtSignal(tuple) 
+    playsignal = pyqtSignal(int) 
 
     def __init__(self,pressaction,area,sizeunit):
         super(nativeUI,self).__init__(None)
@@ -94,6 +94,26 @@ class nativeUI(QWidget):
                     qp.setBrush(QColor(255, 0, 0))
                 if self.area[i,j] != 0:
                     qp.drawRect(i*self.ax, j*self.ay ,self.ax,self.ay)
+
+    def closeEvent(self,e):
+        pass
+
+    def keyPressEvent(self, e):
+        mode = -1
+
+        if e.key() == Qt.Key_Escape:
+            self.close()
+        if e.key() == Qt.Key_Left:
+            mode = 1
+        elif e.key() == Qt.Key_Right:
+            mode = 0
+        elif e.key() == Qt.Key_Up:
+            mode = 3
+        elif e.key() == Qt.Key_Down:
+            mode = 2
+
+        if mode != -1:
+            self.playsignal.emit(mode)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -1,11 +1,12 @@
 import numpy as np 
 
 class snake:
-    def __init__(self,head,body,direction,player):
+    def __init__(self,head,body,direction,velocity,player):
         self.head = head
         self.body = body
         self.direction = direction
         self.player = player
+        self.velocity = velocity
 
     def getbody(self):
         return self.body
@@ -16,12 +17,29 @@ class snake:
     def growup(self):
         self.body.insert(0,self.head)
 
+    def survive(self):
+        for i in range(2,len(self.body)):
+            if (self.head[0] == self.body[i][0]) and (self.head[1] == self.body[i][1]):
+                return False
+        return True
+
     def update(self,area):
-        self.direction = self.player.play(head=head,body=body,area=area,player=self.player)
+        (Nx,Ny) = area.shape
+    
+        direction = self.player.play(
+            head=self.head,
+            body=self.body,
+            area=area)
 
+        if (direction[0] == -self.direction[0]) and (direction[1] == -self.direction[1]):
+            direction = self.direction
+
+        x = (self.head[0] + direction[0])%Nx
+        y = (self.head[1] + direction[1])%Ny
+
+        
+        self.direction = direction
+            
         self.body.pop()
-        x = head[0] + self.direction[0]
-        y = head[0] + self.direction[1]
-
         self.head = (x,y)
         self.body.insert(0,self.head)
