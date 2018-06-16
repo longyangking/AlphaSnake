@@ -8,6 +8,7 @@
 
 ## Dependencies
 + Python 3+
++ Keras, Tensorflow
 + PyQt5
 
 ## Status
