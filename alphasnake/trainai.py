@@ -16,6 +16,12 @@ class SelfplayEngine:
         n_mcts = 1000
         pass
 
+    def __geometry_operators(self, data):
+        '''
+        Reflection or Rotation of training data to remove geometrical or coordination dependence
+        '''
+        pass
+
 class TrainAI:
     '''
     Train AI model process

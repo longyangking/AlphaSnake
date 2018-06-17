@@ -19,8 +19,10 @@ class Human:
 
 
 class Computer:
-    def __init__(self):
-        pass
+    def __init__(self, ai):
+        self.ai = ai
 
     def play(self,head,body,area):
         pass
+
+    def info2state(self, head, body, area):
