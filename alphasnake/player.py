@@ -25,4 +25,3 @@ class Computer:
     def play(self,head,body,area):
         pass
 
-    def info2state(self, head, body, area):

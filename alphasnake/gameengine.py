@@ -118,3 +118,9 @@ class GameEngine:
         self.updatearea()   # Update Area
 
         return self.snake.survive()
+
+    def get_state(self):
+        pass
+
+    def clone(self):
+        pass
