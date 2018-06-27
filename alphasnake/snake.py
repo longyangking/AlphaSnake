@@ -26,10 +26,10 @@ class snake:
     def update(self,area):
         (Nx,Ny) = area.shape
     
-        direction = self.player.play(
+        direction, action = self.player.play(
             head=self.head,
             body=self.body,
-            area=area)
+            area=area)  
 
         if (direction[0] == -self.direction[0]) and (direction[1] == -self.direction[1]):
             direction = self.direction
@@ -43,3 +43,15 @@ class snake:
         self.body.pop()
         self.head = (x,y)
         self.body.insert(0,self.head)
+
+        return action
+
+    def clone(self):
+        newsnake = snake(
+            head=self.head.copy(),
+            body=self.body.copy(),
+            direction=self.direction.copy(),
+            player=self.player,
+            velocity=self.velocity.copy()
+        )
+        return newsnake

@@ -15,7 +15,7 @@ class Human:
             self.direction = (0,-1)
 
     def play(self,head,body,area):
-        return self.direction
+        return self.direction, None
 
 
 class Computer:

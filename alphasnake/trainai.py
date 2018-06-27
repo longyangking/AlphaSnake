@@ -15,16 +15,16 @@ class SelfPlayer:
         action = self.ai.play(engine, s_mcts)
 
         # Action == 0 means no change for move direction
-        if action == 1:
+        if action[1]:
             self.direction = (1,0)
-        if action == 2:
+        if action[2]:
             self.direction = (-1,0)
-        if action == 3:
+        if action[3]:
             self.direction = (0,1)
-        if action == 4:
+        if action[4]:
             self.direction = (0,-1)
 
-        return self.direction
+        return self.direction, action
 
 class SelfplayEngine:
     '''
@@ -61,19 +61,19 @@ class SelfplayEngine:
             endtime = time.time()
             print("End: Run Time {0:.2f}s".format(endtime-starttime))
 
-        datasets = gameengine.get_datasets()
-        datasets = self.__geometry_operators(datasets)
+        data = gameengine.get_data()
+        data = self.__geometry_operators(data)
 
-        return datasets
+        return data
 
-    def __geometry_operators(self, datasets):
+    def __geometry_operators(self, data):
         '''
         Reflection or Rotation of training data to remove geometrical or coordination dependence
         '''
 
         # TODO Reflection or Rotation
 
-        pass
+        return data
 
 class TrainAI:
     '''
@@ -101,14 +101,52 @@ class TrainAI:
             ai=self.ai,
             verbose=self.verbose
         )
+        datasets = engine.start()
+        return datasets
+
+    def evaluate_ai(self):
+        '''
+        Evaluate the performance of AI player and return score value
+        '''
+
+        # TODO Evaluation process
+
+        value = 0
+        return value
 
     def start(self):
+        '''
+        Main process of training AI
+        '''
         temperature = 1.0
         n_selfplay = 100
         n_epochs = 1000
+        interval_save = 10
+        interval_evaluate = 10
 
+        value = 0
         for i in range(n_epochs):
             if self.verbose:
                 print("Train Batch: {0}".format(i+1))
+            
+            if self.verbose:
+                print("Start self-playing")
+            selfplay_data = self.get_selfplay_data()
+            if self.verbose:
+                print("End self-playing")
 
-        pass
+            if self.verbose:
+                print("Updating ai...",end="")
+            self.ai.update(selfplay_data)
+            if self.verbose:
+                print("OK!")
+
+            if (i+1)%interval_save == 0:
+                self.ai.save('selftrain_{0}.h5'.format(i+1))
+
+            if (i+1)%interval_evaluate == 0:
+                new_value = self.evaluate_ai()
+                if new_value > value:
+                    self.ai.save('model.h5')
+
+            

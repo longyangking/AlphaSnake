@@ -376,17 +376,19 @@ class AI:
                     p=0.75*probs + 0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
                 )
                 n_actions[action] += 1
-            action = np.argmax(n_actions)
+            action_index = np.argmax(n_actions)
         else:
             # Evaluate state directly
             state = engine.get_state()
             probs, value = self.evaluate_function(state=state)
             actions = np.arange(5)
-            action = np.random.choice(
+            action_index = np.random.choice(
                 actions,
                 p=0.75*probs + 0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
-                )
-
+                )  
+        
+        action = np.zeros(5)
+        action[action_index] = 1
         return action
 
 if __name__ == "__main__":
