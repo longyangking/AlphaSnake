@@ -11,7 +11,8 @@ class GameEngine:
             init_resourcevalid=False,
             init_resourcepos=None,
             init_validplaces=None,
-            init_record=None
+            init_record=None,
+            is_selfplay=False   # The flag of self-play
             ):
         self.Nx = Nx
         self.Ny = Ny
@@ -39,6 +40,8 @@ class GameEngine:
         if init_record is not None:
             self.record = init_record
     
+        self.is_selfplay = is_selfplay
+
     def getarea(self):
         return self.area.copy()
     

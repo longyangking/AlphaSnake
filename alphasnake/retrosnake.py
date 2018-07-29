@@ -2,7 +2,7 @@ import gameengine
 import ui
 import player
 
-class RetroSnake:
+class GameEngine:
     def __init__(self,Nx,Ny):
         self.Nx = Nx
         self.Ny = Ny
@@ -24,7 +24,14 @@ class RetroSnake:
 
         self.ui.gameend(self.gameengine.getscore())
 
+class RetroSnake:
+    def __init__(self, Nx=15, Ny=15):
+        self.gameengine = GameEngine(Nx,Ny)
+
+    def start(self):
+        self.gameengine.start()
+
 if __name__=="__main__":
-    Nx,Ny = 15,15
-    retrosnake = RetroSnake(Nx,Ny)
+    # Just for debugging
+    retrosnake = RetroSnake()
     retrosnake.start()

@@ -90,8 +90,10 @@ class MCTS:
         '''
         Search best action based on MCTS simulations
         '''
+        eps = 1e-12
+
         for i in range(self.n_playout):
-            _engine = engine.clone()
+            #engine = engine.clone()
             if self.root.is_leaf():
                 # Expand and Evaluate
                 state = engine.get_state()
@@ -105,13 +107,13 @@ class MCTS:
             else:
                 # Select 
                 action, node = self.root.select(self.c_puct)
-                _engine.play(action)
+                engine.play(action)
                 while not node.is_leaf():
                     action, node = node.select(self.c_puct)
-                    _engine.play(action)
+                    engine.play(action)
 
                 # Expand and Evaluate
-                state = _engine.get_state()
+                state = engine.get_state()
                 probs, value = self.evaluate_function(state)
 
                 actions = np.arange(5)
@@ -368,7 +370,7 @@ class AI:
                     evaluate_function=self.evaluate_function, 
                     c_puct=c_puct, 
                     n_playout=n_playout, 
-                    verbose=self.verbose)
+                    verbose=self.verbose
                 )
                 mcts_actions, probs = mcts.search(engine=_engine)
                 action = np.random.choice(

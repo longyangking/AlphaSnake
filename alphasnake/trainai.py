@@ -70,18 +70,89 @@ class SelfplayEngine:
         '''
         Reflection or Rotation of training data to remove geometrical or coordination dependence
         '''
-
+        Xs, ys = zip(*data)
+        states = Xs
+        values, actions = zip(*ys)
+        
         # TODO Reflection or Rotation
 
         return data
+
+class EvaluationPlayer:
+    '''
+    Player for evaluation
+    '''
+    def __init__(self, ai):
+        self.ai = ai 
+        self.direction = (1,0)
+
+    def play(self, engine, s_mcts=True):
+        action = self.ai.play(engine, s_mcts)
+
+        # Action == 0 means no change for move direction
+        if action[1]:
+            self.direction = (1,0)
+        if action[2]:
+            self.direction = (-1,0)
+        if action[3]:
+            self.direction = (0,1)
+        if action[4]:
+            self.direction = (0,-1)
+
+        return self.direction, action
+
+class EvaluationEngine:
+    '''
+    Evaluate Engine
+    '''
+    def __init__(self, ai, Nx, Ny, verbose):
+        self.ai = ai
+        self.Nx = Nx
+        self.Ny = Ny
+        self.verbose = verbose
+
+    def evaluate(self, n_playout):
+        '''
+        Evaluate AI model
+        '''
+        player = EvaluationPlayer(
+            ai=self.ai
+        )
+
+        if self.verbose:
+            starttime = time.time()
+            print("Evaluating...", end="")
+        
+        scores = list()
+        for i in range(n_playout):
+            gameengine = GameEngine(
+                Nx=self.Nx,
+                Ny=self.Ny,
+                player=player,
+                timeperiod=0.5,
+                is_selfplay=False)
+            gameengine.start()
+            while gameengine.update():
+                pass
+
+            score = gameengine.get_score()
+            scores.append(score)
+        
+        score = np.mean(scores)
+
+        if self.verbose:
+            endtime = time.time()
+            print("End: Run Time {0:.2f}s".format(endtime-starttime))
+
+        return score
 
 class TrainAI:
     '''
     Train AI model process
     '''
     def __init__(self, 
-        state_shape=state_shape,
-        verbose=verbose
+        state_shape,
+        verbose=False
     ):
 
         self.state_shape = state_shape
@@ -99,6 +170,8 @@ class TrainAI:
         '''
         engine = SelfplayEngine(
             ai=self.ai,
+            Nx=self.Nx,
+            Ny=self.Ny,
             verbose=self.verbose
         )
         datasets = engine.start()
@@ -108,10 +181,14 @@ class TrainAI:
         '''
         Evaluate the performance of AI player and return score value
         '''
-
-        # TODO Evaluation process
-
-        value = 0
+        evaluator = EvaluationEngine(
+            ai=self.ai,
+            Nx=self.Nx,
+            Ny=self.Ny,
+            verbose=self.verbose
+        )
+        
+        value = evaluator.start(n_playout=10)
         return value
 
     def start(self):
