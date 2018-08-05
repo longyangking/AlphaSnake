@@ -1,10 +1,76 @@
 import numpy as np 
-from gameutils import Snake
-import time
-import copy
 
-class GameEngine:
-    def __init__(self,Nx,Ny,player,timeperiod=1.0,
+class Snake:
+    def __init__(self,head,body,direction,velocity,player):
+        self.head = head
+        self.body = body
+        self.direction = direction
+        self.player = player
+        self.velocity = velocity
+
+    def getbody(self):
+        return self.body
+
+    def gethead(self):
+        return self.head
+
+    def growup(self):
+        self.body.insert(0,self.head)
+
+    def survive(self):
+        for i in range(2,len(self.body)):
+            if (self.head[0] == self.body[i][0]) and (self.head[1] == self.body[i][1]):
+                return False
+        return True
+
+    def update(self, state):
+        (Nx,Ny) = area.shape
+    
+        # direction, action = self.player.play(
+        #     head=self.head,
+        #     body=self.body,
+        #     area=area)  
+        
+        action = self.player.play(state) 
+
+        direction = self.direction
+        if action == 1:
+            direction = (1,0)
+        elif action == 2:
+            direction = (-1,0)
+        elif action == 3:
+            direction = (0,1)
+        elif action == 4:
+            direction = (0,-1)
+
+        # snake never ture around
+        if (direction[0] == -self.direction[0]) and (direction[1] == -self.direction[1]):
+            direction = self.direction
+
+        x = (self.head[0] + direction[0])%Nx
+        y = (self.head[1] + direction[1])%Ny
+
+        
+        self.direction = direction
+            
+        self.body.pop()
+        self.head = (x,y)
+        self.body.insert(0,self.head)
+
+        return action
+
+    def clone(self):
+        newsnake = snake(
+            head=self.head.copy(),
+            body=self.body.copy(),
+            direction=self.direction.copy(),
+            player=self.player,
+            velocity=self.velocity.copy()
+        )
+        return newsnake
+
+class GameZone:
+    def __init__(self,area_shape,player,timeperiod=1.0,
             init_snake=None,
             init_score=0,
             init_area=None,
@@ -14,8 +80,7 @@ class GameEngine:
             init_record=None,
             is_selfplay=False   # The flag of self-play
             ):
-        self.Nx = Nx
-        self.Ny = Ny
+        self.Nx, self.Ny = area_shape
 
         self.snake = None
         if init_snake is not None:
@@ -28,7 +93,7 @@ class GameEngine:
         self.resourcevalid = init_resourcevalid
         self.resourcepos = init_resourcepos
 
-        self.area = np.zeros((Nx,Ny))
+        self.area = np.zeros(zone_shape)
         if init_area is not None:
             self.area = init_area
 
@@ -42,10 +107,17 @@ class GameEngine:
     
         self.is_selfplay = is_selfplay
 
-    def getarea(self):
-        return self.area.copy()
+    def get_area(self):
+        '''
+        Get area info:
+
+        0: blank
+        -1: resource
+        1: snake
+        '''
+        return np.copy(self.area)
     
-    def getscore(self):
+    def get_score(self):
         return self.score
         
     def __pos2place(self,pos):
@@ -131,116 +203,17 @@ class GameEngine:
         if self.resourcevalid:
             self.area[self.resourcepos] = -1
 
-    def update(self):
+    def update(self, state):
         if not self.resourcevalid:
             self.setresource()
 
         starttime = time.time()
-        action = self.snake.update(self.area)
+        action = self.snake.update(state)
         endtime = time.time()
         time.sleep(self.timeperiod-(endtime-starttime))
 
         self.updatearea()   # Update Area
         flag = self.snake.survive()
 
-        # Record Game
-        score = flag*self.getscore()
-        self.record.append(area=self.getarea(), action=action, score=self.getscore())
-
-        return flag
-
-    def get_state(self, state_len=3):
-        state = self.record.get_state(state_len=state_len)
-        return state
-
-    def clone(self):
-        engine = GameEngine(
-            Nx=self.Nx,
-            Ny=self.Ny,
-            player=self.player,
-            timeperiod=self.timeperiod,
-
-            init_snake=self.snake.clone(),
-            init_score=self.getscore(),
-            init_area=self.getarea(),
-            init_resourcevalid=self.resourcevalid,
-            init_resourcepos=self.resourcepos.copy(),
-            init_validplaces=self.validplaces.copy(),
-            init_record=self.record.clone()
-            )
-        return engine
+        return flag, action
         
-    def get_data(self, state_len=3):
-        states, actions, values = self.record.get_data(state_len=state_len)
-        Xs = states
-        ys = zip(actions, values)
-        data = zip(Xs,ys)
-        return data
-
-class Record:
-    def __init__(self, Nx, Ny, 
-            init_areas=None,
-            init_actions=None,
-            init_values=None):
-        self.Nx, self.Ny = Nx, Ny
-
-        self.areas = list()
-        if init_areas is not None:
-            self.areas = init_areas
-
-        self.actions = list()
-        if init_actions is not None:
-            self.actions = init_actions
-
-        self.values = list()
-        if init_values is not None:
-            self.values = init_values
-
-    def clone(self):
-        init_areas = copy.deepcopy(self.areas)
-        init_actions = copy.deepcopy(self.actions)
-        init_values = copy.deepcopy(self.values)
-
-        record = Record(
-            Nx=self.Nx, Ny=self.Ny,
-            init_areas=init_areas,
-            init_actions=init_actions,
-            init_values=init_values
-            )
-        return record
-
-    def append(self, area, action, score):
-        '''
-        Append data and record
-        '''
-        value = score/self.Nx/self.Ny
-        self.areas.append(area)
-        self.actions.append(action)
-        self.values.append(value)
-        
-    def get_state(self, state_len, bias=0):
-        '''
-        Get state
-        '''
-        n_areas = len(self.areas)
-        state = np.zeros((self.Nx, self.Ny, state_len))
-        if n_areas == 0:
-            return state
-        for i in range(state_len):
-            if n_areas-1-i-bias >= 0:
-                state[:,:,i] = self.areas[n_areas-1-i]
-        return state
-
-    def get_data(self, state_len):
-        '''
-        Get all data
-        '''
-        n_data = len(self.areas)
-        states = list()
-        for i in range(n_data):
-            state = self.get_state(state_len, bias=i)
-            states.append(state)
-        values = np.array(self.values)
-        actions = np.array(self.actions)
-
-        return states, actions, values

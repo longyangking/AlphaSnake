@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from keras.models import Model
 from keras.layers import Input, Dense, Conv2D, Flatten, BatchNormalization, Activation, LeakyReLU, Add
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 from keras import regularizers
 import keras.backend as K
 import tensorflow as tf
@@ -73,7 +73,6 @@ class TreeNode:
 
     def is_root(self):
         return self._parent is None
-
 
 class MCTS:
     '''
@@ -259,8 +258,25 @@ class NeuralNetwork:
 			)(out)
 
         return action
+
+    def load_model(self, filename):
+        '''
+        Load Model with file name
+        '''
+        #from keras.models import load_model as LOAD_MODEL
+        self.model.load_weights(filename)
+
+    def save_model(self, filename):
+        '''
+        Save model with file name
+        '''
+        self.model.save_weights(filename)
+
+    def plot_model(self, filename='model.png'):
+        from keras.utils import plot_model
+        plot_model(self.model, show_shapes=True, to_file=filename)
         
-class AI:
+class AlphaAI:
     '''
     Artificial Intelligence Player
     '''
@@ -287,10 +303,10 @@ class AI:
         else:
             # Default Neural Network Structure
             self.network_structure = list()
-            self.network_structure.append({'filters':32, 'kernel_size':3})
-            self.network_structure.append({'filters':32, 'kernel_size':3})
-            self.network_structure.append({'filters':32, 'kernel_size':3})
-            self.network_structure.append({'filters':32, 'kernel_size':3})
+            self.network_structure.append({'filters':64, 'kernel_size':3})
+            self.network_structure.append({'filters':64, 'kernel_size':3})
+            self.network_structure.append({'filters':64, 'kernel_size':3})
+            self.network_structure.append({'filters':64, 'kernel_size':3})
 
         self.model = None
 
@@ -304,22 +320,7 @@ class AI:
             network_structure = self.network_structure
         ).init()
 
-    def load_model(self, filename):
-        '''
-        Load Model with file name
-        '''
-        from keras.models import load_model as LOAD_MODEL
-        self.model = LOAD_MODEL(filename)
 
-    def save_model(self, filename):
-        '''
-        Save model with file name
-        '''
-        self.model.save(filename)
-
-    def plot_model(self, filename='model.png'):
-        from keras.utils import plot_model
-        plot_model(self.model, show_shapes=True, to_file=filename)
 
     def update(self, data):
         '''
@@ -392,6 +393,211 @@ class AI:
         action = np.zeros(5)
         action[action_index] = 1
         return action
+
+class QNetwork:
+    def __init__(self, 
+        input_shape,
+        output_dim,
+        network_structure,
+        learning_rate=1e-3,
+        l2_const=1e-4,
+        verbose=False
+        ):
+
+        self.input_shape = input_shape
+        self.output_dim = output_dim
+        self.network_structure = network_structure
+
+        self.learning_rate = learning_rate
+        self.l2_const = l2_const
+        self.verbose = verbose
+
+        if self.verbose:
+            print("Initiating network structure...",end="")
+
+        self.model = self.build_model()
+
+        if self.verbose:
+            print("End.")
+
+    def build_model(self):
+        state_tensor = Input(shape=self.input_shape)
+
+        x = self.__conv_block(state_tensor, self.network_structure[0]['filters'], self.network_structure[0]['kernel_size'])
+        if len(self.network_structure) > 1:
+            for h in self.network_structure[1:]:
+                x = self.__res_block(x, h['filters'], h['kernel_size'])
+        
+        action = self.__action_block(x)
+        
+        model = Model(inputs=state_tensor, outputs=action)
+        model.compile(
+            loss='mse',
+			optimizer=Adam(self.learning_rate)	
+			)
+
+        return model
+    
+    def __conv_block(self, x, filters, kernel_size=3):
+        '''
+        Convolutional Neural Network
+        '''
+        out = Conv2D(
+            filters = filters,
+            kernel_size = kernel_size,
+            padding = 'same',
+            activation='linear',
+            kernel_regularizer = regularizers.l2(self.l2_const)
+        )(x)
+        out = BatchNormalization(axis=1)(out)
+        out = LeakyReLU()(out)
+        return out
+
+    def __res_block(self, x, filters, kernel_size=3):
+        '''
+        Residual Convolutional Neural Network
+        '''
+        out = Conv2D(
+            filters = filters,
+            kernel_size = kernel_size,
+            padding = 'same',
+            activation='linear',
+            kernel_regularizer = regularizers.l2(self.l2_const)
+        )(x)
+        out = BatchNormalization(axis=1)(out)
+        out = Add()([out, x])
+        out = LeakyReLU()(out)
+        return out
+
+    def __action_block(self, x):
+        out = Conv2D(
+            filters = 64,
+            kernel_size = (3,3),
+            padding = 'same',
+            activation='linear',
+            kernel_regularizer = regularizers.l2(self.l2_const)
+        )(x)
+        out = BatchNormalization(axis=1)(out)
+        out = LeakyReLU()(out)
+
+        out = Flatten()(out)
+        out = Dense(
+            128,
+            use_bias=False,
+            activation='linear',
+            kernel_regularizer= regularizers.l2(self.l2_const)
+		)(out)
+        out = LeakyReLU()(out)
+
+        action = Dense(
+			self.output_dim, 
+            use_bias=False,
+            activation='relu',
+            kernel_regularizer=regularizers.l2(self.l2_const)
+			)(out)
+
+        return action
+
+    def fit(self, states, actions, epochs, batch_size):
+        history = self.model.fit(
+            states, actions, 
+            epochs=epochs, batch_size=batch_size, verbose=self.verbose
+        )
+        return history
+
+    def train_on_batch(self, states, actions):
+        loss = self.model.train_on_batch(states, actions)
+        return loss
+
+    def predict(self, states):
+        return self.model.predict(states)
+
+    def load_model(self, filename):
+        '''
+        Load Model with file name
+        '''
+        #from keras.models import load_model as LOAD_MODEL
+        self.model.load_weights(filename)
+
+    def save_model(self, filename):
+        '''
+        Save model with file name
+        '''
+        self.model.save_weights(filename)
+
+    def plot_model(self, filename='model.png'):
+        from keras.utils import plot_model
+        plot_model(self.model, show_shapes=True, to_file=filename)
+
+class QAI:
+    def __init__(self,
+        state_shape,
+        output_dim,
+        verbose=False
+        ):
+
+        self.state_shape = state_shape
+        self.output_dim = output_dim
+        self.verbose = verbose
+
+        network_structure = list()
+        network_structure.append({'filters':128, 'kernel_size':3})
+        network_structure.append({'filters':128, 'kernel_size':3})
+        network_structure.append({'filters':128, 'kernel_size':3})
+        network_structure.append({'filters':128, 'kernel_size':3})
+
+        self.nnet = QNetwork(
+            state_shape=state_shape,
+            output_dim=output_dim,
+            network_structure=network_structure,
+            verbose=self.verbose)
+
+    def get_state_shape(self):
+        return np.copy(self.state_shape)
+
+    def train(self, states, actions, epochs, batch_size):
+        history = self.nnet.fit(states, actions, epochs=epochs, batch_size=batch_size)
+        return history
+
+    def predict(self, states):
+        return self.nnet.predict(states)
+
+    def train_on_batch(self, mini_batch, gamma=0.99):
+        n_data = len(mini_batch)
+        Xs = np.zeros((n_data, *self.state_shape))
+        ys = np.zeros((n_data, self.output_dim))
+        eps = 1e-12
+
+        if self.verbose:
+            print("Q train on mini-batch.")
+
+        for i in range(n_data):
+            state, action_index, reward, state_next, terminal = mini_batch[i]
+            Xs[i] = state
+            ys[i] = self.nnet.predict(state)
+            Q = self.nnet.predict(state_next)
+
+            action_index = int(action_index)
+            if terminal:
+                ys[i, action_index] = reward
+            else:
+                ys[i, action_index] = reward + gamma*np.max(Q)
+
+            ys[i] = ys[i]/(np.sum(ys[i]) + eps)  # Add a process to get mean value
+            
+        loss = self.nnet.train_on_batch(Xs, ys)
+        return loss
+
+    def load_nnet(self, filename):
+        self.nnet.load_model(filename)
+
+    def save_nnet(self, filename):
+        self.nnet.save_model(filename)
+
+    def play(self, state):
+        actions = self.nnet.predict(state)
+        action_index = np.argmax(actions)
+        return action_index
 
 if __name__ == "__main__":
     print("Just for debug, not main parts")

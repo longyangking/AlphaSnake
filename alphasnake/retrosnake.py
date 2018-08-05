@@ -15,14 +15,14 @@ class GameEngine:
         self.gameengine.start()
 
         sizeunit = 30
-        area = self.gameengine.getarea()
+        area = self.gameengine.get_area()
         self.ui = ui.UI(pressaction=self.player.setdirection,area=area,sizeunit=sizeunit)
         self.ui.start()
         
         while self.gameengine.update():
-            self.ui.setarea(area=self.gameengine.getarea())
+            self.ui.setarea(area=self.gameengine.get_area())
 
-        self.ui.gameend(self.gameengine.getscore())
+        self.ui.gameend(self.gameengine.get_score())
 
 class RetroSnake:
     def __init__(self, Nx=15, Ny=15):
