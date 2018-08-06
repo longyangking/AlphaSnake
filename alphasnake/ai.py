@@ -509,8 +509,10 @@ class QNetwork:
         loss = self.model.train_on_batch(states, actions)
         return loss
 
-    def predict(self, states):
-        return self.model.predict(states)
+    def predict(self, state):
+        state = state.reshape(-1,*state.shape)
+        action = self.model.predict(state)
+        return action[0]
 
     def load_model(self, filename):
         '''
@@ -547,7 +549,7 @@ class QAI:
         network_structure.append({'filters':128, 'kernel_size':3})
 
         self.nnet = QNetwork(
-            state_shape=state_shape,
+            input_shape=state_shape,
             output_dim=output_dim,
             network_structure=network_structure,
             verbose=self.verbose)
@@ -569,18 +571,18 @@ class QAI:
         eps = 1e-12
 
         if self.verbose:
-            print("Q train on mini-batch.")
+            print("Q train on mini-batch with size: {0}".format(n_data))
 
         for i in range(n_data):
             state, action_index, reward, state_next, terminal = mini_batch[i]
             Xs[i] = state
             ys[i] = self.nnet.predict(state)
-            Q = self.nnet.predict(state_next)
 
             action_index = int(action_index)
             if terminal:
                 ys[i, action_index] = reward
             else:
+                Q = self.nnet.predict(state_next)
                 ys[i, action_index] = reward + gamma*np.max(Q)
 
             ys[i] = ys[i]/(np.sum(ys[i]) + eps)  # Add a process to get mean value

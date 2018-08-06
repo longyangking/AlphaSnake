@@ -28,11 +28,11 @@ if __name__ == "__main__":
 
     if args.retrain:
         if verbose:
-            print("Start to re-train AI")
+            print("Start to re-train AI with state shape: {0}".format(__default_state_shape__))
 
         # Abondon the previous model and train a new one
 
-        from trainai import TrainAI
+        from train_Qai import TrainAI
 
         trainai = TrainAI(
             state_shape=__default_state_shape__,

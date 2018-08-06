@@ -1,4 +1,5 @@
 import numpy as np 
+import time
 
 class Snake:
     def __init__(self,head,body,direction,velocity,player):
@@ -23,15 +24,22 @@ class Snake:
                 return False
         return True
 
-    def update(self, state):
-        (Nx,Ny) = area.shape
+    def update(self, state, is_selfplay, epsilon):
+        (Nx,Ny) = state.shape[:2]
     
         # direction, action = self.player.play(
         #     head=self.head,
         #     body=self.body,
         #     area=area)  
         
-        action = self.player.play(state) 
+        if is_selfplay:
+            v = np.random.random()
+            if v < epsilon:
+                action = np.random.randint(5)
+            else:
+                action = self.player.play(state)
+        else:
+            action = self.player.play(state) 
 
         direction = self.direction
         if action == 1:
@@ -93,7 +101,7 @@ class GameZone:
         self.resourcevalid = init_resourcevalid
         self.resourcepos = init_resourcepos
 
-        self.area = np.zeros(zone_shape)
+        self.area = np.zeros(area_shape)
         if init_area is not None:
             self.area = init_area
 
@@ -101,7 +109,6 @@ class GameZone:
         if init_validplaces is not None:
             self.validplaces = init_validplaces
 
-        self.record = Record(Nx=self.Nx, Ny=self.Ny)
         if init_record is not None:
             self.record = init_record
     
@@ -203,14 +210,16 @@ class GameZone:
         if self.resourcevalid:
             self.area[self.resourcepos] = -1
 
-    def update(self, state):
+    def update(self, state, epsilon=0.9):
         if not self.resourcevalid:
             self.setresource()
 
         starttime = time.time()
-        action = self.snake.update(state)
+        action = self.snake.update(state, is_selfplay=self.is_selfplay, epsilon=epsilon)
         endtime = time.time()
-        time.sleep(self.timeperiod-(endtime-starttime))
+
+        if not self.is_selfplay:
+            time.sleep(self.timeperiod-(endtime-starttime))
 
         self.updatearea()   # Update Area
         flag = self.snake.survive()

@@ -3,6 +3,7 @@ from ai import QAI
 import time
 import random
 from gameutils import Snake, GameZone
+from collections import deque
 
 class SelfplayEngine:
     '''
@@ -24,7 +25,13 @@ class SelfplayEngine:
         '''
         Update stored states
         '''
-        pass
+        state = np.zeros((self.Nx, self.Ny, self.channel))
+        n_areas = len(self.areas)
+        for i in range(self.channel):
+            if i+1 <= n_areas:
+                state[:,:,-(i+1)] = self.areas[-(i+1)]
+
+        self.states.append(state)
 
     def get_state(self):
         '''
@@ -39,17 +46,14 @@ class SelfplayEngine:
         '''
         Start a game for AI model
         '''
-        if self.verbose:
-            starttime = time.time()
-            print("Self-playing...", end="")
-
         area_shape = (self.Nx, self.Ny)
         gamezone = GameZone(
             area_shape=area_shape,
-            player=self.ai
+            player=self.ai,
+            is_selfplay=True
         )
 
-        gamezone.start()
+        gamezone.start(snakelength=5)
 
         # Main process
         flag = True
@@ -57,23 +61,24 @@ class SelfplayEngine:
             self.areas.append(gamezone.get_area())
             self.update_states()
 
-            flag, action = gamezone.update(self.get_state())
+            flag, action = gamezone.update(self.get_state(), epsilon=0.8)
 
             self.actions.append(action)
-            self.scores.append(self.gamezone.get_score())
-
-        if self.verbose:
-            endtime = time.time()
-            print("End: Run Time {0:.2f}s".format(endtime-starttime))
+            self.scores.append(gamezone.get_score())
 
         states = np.array(self.states)
+
+        states_next = np.copy(states)
+        states_next[:-1] : states_next[1:]
+        states_next[-1] = np.zeros_like(states_next[-1])
+
         scores = np.array(self.scores).reshape(-1,1)
         actions = np.array(self.actions).reshape(-1,1)
 
         terminals = np.zeros(len(self.scores)).reshape(-1,1)
         terminals[-1] = 1
 
-        data = zip(states, actions, scores, terminals)
+        data = (states, actions, scores, states_next, terminals)
         return data
 
 class TrainAI:
@@ -82,64 +87,65 @@ class TrainAI:
     '''
     def __init__(self, 
         state_shape,
+        replay_size=10000,
         verbose=False
     ):
 
         self.state_shape = state_shape
         self.verbose = verbose
 
-        self.ai = AI(
+        self.ai = QAI(
             state_shape=self.state_shape,
-            action_types=5,
+            output_dim=5,
             verbose=self.verbose
             )
+
+        self.replay_size = replay_size
+        self.dataset = deque()
 
     def get_selfplay_data(self, n_round):
         '''
         Run self-play and then return the results
         '''
-        all_states, all_actions, all_rewards, all_terminals = list(), list(), list(), list()
-
         if self.verbose:
-            print("Start self-playing to obtain data...")
+            starttime = time.time()
+            count = 0
 
         for i in range(n_round):
+            if self.verbose:
+                print("Start self-playing to obtain data...(round {0})".format(i+1))
+
             engine = SelfplayEngine(
                 ai=self.ai,
                 verbose=self.verbose
             )
             data = engine.start()
-            states, actions, rewards, terminals = data
+            states, actions, rewards, states_next, terminals = data
 
             for i in range(len(terminals)):
-                all_states.append(states[i])
-                all_actions.append(actions[i])
-                all_rewards.append(rewards[i])
-                all_terminals.append(terminals[i])
+                self.dataset.append((states[i], actions[i], rewards[i], states_next[i], terminals[i]))
+                if len(self.dataset) > self.replay_size:
+                    self.dataset.popleft()
 
-        all_states = np.array(all_states)
-        all_actions = np.array(all_actions)
-        all_rewards = np.array(all_rewards)
-        all_terminals = np.array(all_terminals)
-            
-        dataset = zip(all_states, all_actions, all_rewards, all_terminals)
-
+            count += len(terminals)
+                
         if self.verbose:
-            print("End of self-play. The shape of dataset: [states: {0}; actions: {1}; rewards: {2}; terminals: {3}]".format(
-                all_states.shape,
-                all_actions.shape,
-                all_rewards.shape,
-                all_terminals.shape
-            ))
+            endtime = time.time()
+            print("End of self-play: Run Time {0:.2f}s, Set Size: {1}".format(endtime-starttime, count))
 
-        return dataset
-
-    def update_ai(self, dataset, minibatch_size):
+    def update_ai(self, minibatch_size):
         '''
         Evaluate the performance of AI player and return score value
         '''
-        minibatch = random.sample(dataset, minibatch_size)
+        if self.verbose:
+            print("Updating neural network of AI model ...")
+
+        minibatch = random.sample(self.dataset, minibatch_size)
         loss = self.ai.train_on_batch(minibatch)
+
+        if self.verbose:
+            print("End of updation with loss: {0:.4f}".format(loss))
+
         return loss
 
     def start(self):
@@ -147,31 +153,28 @@ class TrainAI:
         Main process of training AI
         '''
         
-        n_round = 30
-        n_epochs = 1000
+        n_round = 10
+        n_epochs = 100000
+        replay_size = 10000
+        minibatch_size = 32
+        verbose_interval = 1
+        save_interval = 10
 
         for i in range(n_epochs):
             if self.verbose:
-                print("Train Batch: {0}".format(i+1))
+                if (i+1)%verbose_interval == 0:
+                    print("Train Batch: {0}".format(i+1))
             
-            if self.verbose:
-                print("Start self-playing")
-            selfplay_data = self.get_selfplay_data()
-            if self.verbose:
-                print("End self-playing")
+            self.get_selfplay_data(n_round)
+            loss = self.update_ai(minibatch_size)
 
             if self.verbose:
-                print("Updating ai...",end="")
-            self.ai.update(selfplay_data)
+                print("Saving model...",end="")
+
+            if (i+1)%save_interval == 0:
+                self.ai.save_nnet('model.h5')
+
             if self.verbose:
                 print("OK!")
-
-            if (i+1)%interval_save == 0:
-                self.ai.save('selftrain_{0}.h5'.format(i+1))
-
-            if (i+1)%interval_evaluate == 0:
-                new_value = self.evaluate_ai()
-                if new_value > value:
-                    self.ai.save('model.h5')
 
             
