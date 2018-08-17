@@ -10,20 +10,28 @@
 ## Dependencies
 + Python 3+
 + Keras, Tensorflow
-+ PyQt5
++ PyQt5 (For UI)
 
 ## How to use
 + Play Retro Snake by yourself (Linux)  
-    ```cd alphasnake```  
-    ```python alphasnake.py --play```
 
-+ Get help and information (Linux)  
-    ```cd alphasnake```  
-    ```python alphasnake.py --help```  
-    ```python alphasnake.py --info```
+        cd alphasnake
+        python alphasnake.py --play
 
-+ Train AI model (Coming)
-+ Play Snake game by AI (Coming)
++ Re-Train AI model (recommand to do this in GPU server)
+
+        cd alphasnake.py
+        python alphasnake.py --retrain --verbose
+
++ Continue to train previous AI model (recommand to do this in GPU server)
+
+        cd alphasnake.py
+        python alphasnake.py --train --verbose
+
++ Play Snake game by AI
+
+        cd alphasnake.py
+        python alphasnake.py --playai
 
 ## Information
 You can get the similar theoretical details in the paper of DeepMind company about AlphaZero [1,2].
