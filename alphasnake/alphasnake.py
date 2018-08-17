@@ -7,14 +7,14 @@ __info__ = "Play Snake Game with AI"
 
 __default_board_shape__ = 15, 15
 __default_state_shape__ = *__default_board_shape__, 3
+__filename__ = 'model.h5'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__info__)
     parser.add_argument("--retrain", action='store_true', default=False, help="Re-Train AI")
     parser.add_argument("--train",  action='store_true', default=False, help="Train AI")
     parser.add_argument("--verbose", action='store_true', default=False, help="Verbose")
-    parser.add_argument("--info", action='store_true', default=False, help="Show the process information")
-    parser.add_argument("--playbyai", action='store_true', default=False, help="Play snake game with AI")
+    parser.add_argument("--playai", action='store_true', default=False, help="Play snake game with AI")
     parser.add_argument("--play", action='store_true', default=False, help="Play snake game")
 
     args = parser.parse_args()
@@ -22,9 +22,28 @@ if __name__ == "__main__":
 
     if args.train:
         if verbose:
-            print("Start to train AI")
+            print("Continue to re-train AI with state shape: {0}".format(__default_state_shape__))
 
-        # TODO Load lastest model here and continue training
+        from ai import QAI
+        from train_Qai import TrainAI
+
+        ai = QAI(state_shape=__default_state_shape__, output_dim=5, verbose=verbose)
+        if verbose:
+            print("loading latest model: [{0}] ...".format(__filename__),end="")
+        ai.load_nnet(__filename__)
+        if verbose:
+            print("load OK!")
+
+        trainai = TrainAI(
+            state_shape=__default_state_shape__,
+            ai=ai,
+            verbose=verbose
+        )
+        trainai.start(filename=__filename__)
+
+        if verbose:
+            print("The latest AI model is saved as [{0}]".format(__filename__))
+       
 
     if args.retrain:
         if verbose:
@@ -38,34 +57,36 @@ if __name__ == "__main__":
             state_shape=__default_state_shape__,
             verbose=verbose
         )
-        trainai.start()
+        trainai.start(filename=__filename__)
 
-    if args.info:
-        info = """
-            {name}: {version}
-            Author: {author}
-            Info: {info}
-        """.format(
-            name='AlphaZero',
-            version=__version__,
-            author=__author__,
-            info=__info__
-        )
-        print(info)
-
-        help_info = """
-            --retrain:  Re-Train AI
-            --train:    Train AI
-            --verbose:  Show the process information
-            --play:     Play with AI
-        """
-        print("Arguments:")
-        print(help_info)
+        if verbose:
+            print("The latest AI model is saved as [{0}]".format(__filename__))
 
     if args.play:
         print("Play snake game. Please close game in terminal after closing window (i.e, Press Ctrl+C).")
         from retrosnake import RetroSnake
+        from retrosnake import Human
 
         Nx, Ny = __default_board_shape__
-        retrosnake = RetroSnake(Nx, Ny)
+        retrosnake = RetroSnake(state_shape=__default_state_shape__)
         retrosnake.start()
+
+    if args.playai:
+        from ai import QAI
+        from retrosnake import GameEngine
+
+        ai = QAI(state_shape=__default_state_shape__, output_dim=5, verbose=verbose)
+        if verbose:
+            print("loading latest model: [{0}] ...".format(__filename__),end="")
+
+        ai.load_nnet(__filename__)
+
+        if verbose:
+            print("load OK!")
+
+        print("Play snake game. Please close game in terminal after closing window (i.e, Press Ctrl+C).")
+        gameengine = GameEngine(state_shape=__default_state_shape__, player=ai, verbose=verbose)
+        gameengine.start_ai()
+        
+
+        

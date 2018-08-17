@@ -31,6 +31,7 @@ class nativeUI(QWidget):
                         (screen.height()-size.height())/2,
                         Nx*self.sizeunit, Ny*self.sizeunit)
         self.setWindowTitle("Retro Snake")
+        self.setWindowIcon(QIcon('./ui/icon.png'))
 
         # set Background color
         palette =  QPalette()
@@ -104,13 +105,16 @@ class nativeUI(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
         if e.key() == Qt.Key_Left:
-            mode = 1
-        elif e.key() == Qt.Key_Right:
-            mode = 0
-        elif e.key() == Qt.Key_Up:
-            mode = 3
-        elif e.key() == Qt.Key_Down:
             mode = 2
+        elif e.key() == Qt.Key_Right:
+            mode = 1
+        elif e.key() == Qt.Key_Up:
+            mode = 4
+        elif e.key() == Qt.Key_Down:
+            mode = 3
+
+        if e.key() == Qt.Key_Space:
+            mode = 100  # For pausing game
 
         if mode != -1:
             self.playsignal.emit(mode)

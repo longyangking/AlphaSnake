@@ -37,7 +37,7 @@ class SelfplayEngine:
         '''
         Get the state matrix
         '''
-        if len(self.states) > 0:
+        if len(self.states) == 0:
             return np.zeros((self.Nx, self.Ny, self.channel))
         else:
             return self.states[-1]
@@ -88,17 +88,21 @@ class TrainAI:
     def __init__(self, 
         state_shape,
         replay_size=10000,
+        ai=None,
         verbose=False
     ):
 
         self.state_shape = state_shape
         self.verbose = verbose
 
-        self.ai = QAI(
-            state_shape=self.state_shape,
-            output_dim=5,
-            verbose=self.verbose
-            )
+        if ai is None:
+            self.ai = QAI(
+                state_shape=self.state_shape,
+                output_dim=5,
+                verbose=self.verbose
+                )
+        else:
+            self.ai = ai
 
         self.replay_size = replay_size
         self.dataset = deque()
@@ -148,7 +152,7 @@ class TrainAI:
 
         return loss
 
-    def start(self):
+    def start(self, filename):
         '''
         Main process of training AI
         '''
@@ -172,7 +176,7 @@ class TrainAI:
                 print("Saving model...",end="")
 
             if (i+1)%save_interval == 0:
-                self.ai.save_nnet('model.h5')
+                self.ai.save_nnet(filename)
 
             if self.verbose:
                 print("OK!")
