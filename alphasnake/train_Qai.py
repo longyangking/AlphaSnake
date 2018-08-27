@@ -126,8 +126,8 @@ class TrainAI:
             data = engine.start()
             states, actions, rewards, states_next, terminals = data
 
-            for i in range(len(terminals)):
-                self.dataset.append((states[i], actions[i], rewards[i], states_next[i], terminals[i]))
+            for j in range(len(terminals)):
+                self.dataset.append((states[j], actions[j], rewards[j], states_next[j], terminals[j]))
                 if len(self.dataset) > self.replay_size:
                     self.dataset.popleft()
 
